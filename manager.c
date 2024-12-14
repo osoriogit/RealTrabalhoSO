@@ -203,25 +203,41 @@ void *handleClients(void *arg) {
                 }
                 strcpy(pedido.acao, "");
             }else if (strcmp(pedido.acao, "unsubscribe") == 0) {
-                int result = subscribeClient(pedido.username,"");
-                if (result == -2) {
-                    printf("[INFO] Falha: Tópico %s está bloqueado.\n", pedido.topico);
-                } else if (result > 0) {
-                    printf("[INFO] %s dessubscreveu ao tópico %s\n", pedido.username, pedido.topico);
-                    int v = open(pedido.username, O_WRONLY);
-                     
-                    sprintf(message.mensagem, "DESUBSCREVEU AO TOPICO %s", pedido.topico);
-                    pthread_mutex_lock(&mutex);
-                    strcpy(message.motivo,"Sucesso dessubscrito");
-                    write(v, &message, sizeof(message));
-                    close(v); 
-                    pthread_mutex_unlock(&mutex);
-                    
-                }strcpy(pedido.acao, "");} else if (strcmp(pedido.acao, "topics") == 0) {
-                for(int contador=0;contador<num_topics;contador++){
-                        strcpy(message.mensagem,"topico");
-                        strcpy(message.motivo,"topico");
-                    broadcastALL(message);
+                    for (int i = 0; i < num_clients; i++) {
+                        if (strcmp(users[i].username,pedido.username) == 0) {
+                            if (users[i].nSubs > 0) {
+                                strncpy(users[i].subs[users[i].nSubs], "", MAX_TOPIC_NAME);
+                                users[i].nSubs--;
+                                {
+                                    printf("[INFO] %s dessubscreveu ao tópico %s\n", pedido.username, pedido.topico);
+                                    int v = open(pedido.username, O_WRONLY);
+                                    
+                                    sprintf(message.mensagem, "DESUBSCREVEU AO TOPICO %s", pedido.topico);
+                                    pthread_mutex_lock(&mutex);
+                                    strcpy(message.motivo,"Sucesso dessubscrito");
+                                    write(v, &message, sizeof(message));
+                                    close(v); 
+                                    pthread_mutex_unlock(&mutex);
+                                }
+                            }
+                        }
+                    }strcpy(pedido.acao, "");
+
+                } else if (strcmp(pedido.acao, "topics") == 0) {{
+                        
+                        printf("\nTopicos:\n");
+                        pthread_mutex_lock(&mutex);
+                        for (int i = 0; i < num_topics; i++) {
+                            printf(" Nome: %s\n", topics[i].nome);
+                            strcpy(message.mensagem,topics[i].nome);
+                            strcpy(message.motivo,topics[i].nome);
+                            int client_fd = open(pedido.username, O_WRONLY);
+                            if (client_fd != -1) {
+                                write(client_fd, &message, sizeof(message));
+                                close(client_fd);
+                            }
+                        }
+                        pthread_mutex_unlock(&mutex);
                 }
                 strcpy(pedido.acao, ""); 
 
