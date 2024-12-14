@@ -33,31 +33,35 @@ int createMsgFich(char *msg_fich) {
 }
 // Função para encontrar ou criar um tópico
 int findOrCreateTopic(const char *topic_name) {
-    pthread_mutex_lock(&mutex);
+    fprintf(stderr, "[DEBUG] ENTROU NO BLOCO MUTEX");
+
     for (int i = 0; i < num_topics; i++) {
+        fprintf(stderr, "[DEBUG] ENTROU NO IF %s, %s", topics[i].nome, topic_name);
+
         if (strcmp(topics[i].nome, topic_name) == 0) {
-            pthread_mutex_unlock(&mutex);
+            fprintf(stderr, "[DEBUG] TOPICO JA EXISTE");
             return i;
         }
     }
     if (num_topics < MAX_TOPICS) {
+        fprintf(stderr, "[DEBUG] ENTROU NO IF 2 %i", num_topics);
+
         strncpy(topics[num_topics].nome, topic_name, MAX_TOPIC_NAME);
         topics[num_topics].nPersistent = 0;
         topics[num_topics].isBlocked = 0;
         num_topics++;
-        pthread_mutex_unlock(&mutex);
         return num_topics - 1;
     }
-    pthread_mutex_unlock(&mutex);
     return -1; // Não foi possível criar mais tópicos
 }
 
 // Função para subscrever um cliente a um tópico
 int subscribeClient(const char *username, const char *topic_name) {
-    fprintf(stderr, "[DEBUG] %s, %s\n", username,topic_name);
     pthread_mutex_lock(&mutex);
 
     int topic_idx = findOrCreateTopic(topic_name);
+
+
     if (topic_idx == -1) {
         pthread_mutex_unlock(&mutex);
         return -1; // Tópico não encontrado ou não criado
@@ -130,6 +134,7 @@ void broadcastMessage(const char *topic_name, const char *message) {
 void *handleClients(void *arg) {
     int server_fd = *((int *)arg);
     Pedido pedido;
+    Resposta message;
 
     while (running) {
         read(server_fd, &pedido, sizeof(pedido));
@@ -139,7 +144,7 @@ void *handleClients(void *arg) {
             if (strcmp(pedido.acao, "validar") == 0) {
                 clientes_conectados++;
                 printf("USERNAME INTRUDUZIDO %s\n",pedido.mensagem);
-                Resposta message;
+                
                 strcpy(message.mensagem,"USER VALIDO");
                 strcpy(message.motivo,"USER VALIDO");
                 if(clientes_conectados>10){strcpy(message.motivo,"USER_LIMIT");};
@@ -157,11 +162,21 @@ void *handleClients(void *arg) {
                     printf("[INFO] Falha: Tópico %s está bloqueado.\n", pedido.topico);
                 } else if (result > 0) {
                     printf("[INFO] %s subscreveu ao tópico %s\n", pedido.username, pedido.topico);
+                    int v = open(pedido.username, O_WRONLY);
+                     
+                    sprintf(message.mensagem, "SUBSCREVEU AO TOPICO %s", pedido.topico);
+                    setRespostaMotivo(&message, "Sucesso subscrito");
+                    write(v, &message, sizeof(message));
+                    close(v); 
                 }
+                strcpy(pedido.acao, ""); 
+
             } else if (strcmp(pedido.acao, "msg") == 0) {
                 printf("[INFO] Mensagem recebida no tópico %s: %s\n",
                        pedido.topico, pedido.mensagem);
                 broadcastMessage(pedido.topico, pedido.mensagem);
+                strcpy(pedido.acao, ""); 
+
             }
     }
 
