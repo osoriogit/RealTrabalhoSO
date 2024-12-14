@@ -114,20 +114,24 @@ int blockTopic(const char *topic_name, int block) {
     pthread_mutex_unlock(&mutex);
     return -1; // Tópico não encontrado
 }
-void broadcastMessage(const char *topic_name, const char *message) {
+void broadcastMessage(const char *topic_name, Resposta message) {
+    fprintf(stderr, "[DEBUG] BROADCAST_ENTER");
     pthread_mutex_lock(&mutex);
     for (int i = 0; i < num_clients; i++) {
         for (int j = 0; j < users[i].nSubs; j++) {
-            if (strcmp(users[i].subs[j], topic_name) == 0) {
-                snprintf(client_pipe_name, sizeof(client_pipe_name), CLIENT_FIFO_TEMPLATE, atoi(users[i].username));
+            if (strcmp(users[i].subs[j], topic_name) == 0){
+                //snprintf(client_pipe_name, sizeof(client_pipe_name), CLIENT_FIFO_TEMPLATE, atoi(users[i].username));
+                strcpy(client_pipe_name, users[i].username);
                 int client_fd = open(client_pipe_name, O_WRONLY);
                 if (client_fd != -1) {
-                    write(client_fd, message, strlen(message) + 1);
+                    write(client_fd, &message, sizeof(message));
                     close(client_fd);
                 }
             }
         }
     }
+    fprintf(stderr, "[DEBUG] BC_CLOSE");
+
     pthread_mutex_unlock(&mutex);
 }
 // Função para lidar com clientes
@@ -165,16 +169,21 @@ void *handleClients(void *arg) {
                     int v = open(pedido.username, O_WRONLY);
                      
                     sprintf(message.mensagem, "SUBSCREVEU AO TOPICO %s", pedido.topico);
-                    setRespostaMotivo(&message, "Sucesso subscrito");
-                    write(v, &message, sizeof(message));
-                    close(v); 
+                    pthread_mutex_lock(&mutex);
+                        setRespostaMotivo(&message, "Sucesso subscrito");
+                        write(v, &message, sizeof(message));
+                        close(v); 
+                    pthread_mutex_unlock(&mutex);
                 }
                 strcpy(pedido.acao, ""); 
 
             } else if (strcmp(pedido.acao, "msg") == 0) {
                 printf("[INFO] Mensagem recebida no tópico %s: %s\n",
                        pedido.topico, pedido.mensagem);
-                broadcastMessage(pedido.topico, pedido.mensagem);
+                
+                setRespostaMensagem(&message, pedido.mensagem);
+                setRespostaMotivo(&message, "Broadcast");
+                broadcastMessage(pedido.topico, message);
                 strcpy(pedido.acao, ""); 
 
             }
