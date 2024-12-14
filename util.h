@@ -46,28 +46,4 @@ typedef struct{
     int nSubs;
 } Users;
 
-
-// Function Headers for Managing Pedido
-Pedido *createPedido(const char *username, const char *acao, const char *topico, int duracao, const char *mensagem);
-void freePedido(Pedido *pedido);
-
-// Function Headers for Managing Resposta
-Resposta *createResposta(const char *mensagem, const char *motivo);
-void freeResposta(Resposta *resposta);
-void setRespostaMensagem(Resposta *resposta, const char *mensagem);
-void setRespostaMotivo(Resposta *resposta, const char *motivo);
-
-// Function Headers for Managing Topics
-Topics *createTopic(const char *nome);
-void freeTopic(Topics *topic);
-int addPersistentMessage(Topics *topic, const char *message);
-
-// Function Headers for Managing Users
-Users *createUser(const char *username);
-void freeUser(Users *user);
-int addUserSubscription(Users *user, const char *topic_name);
-
-// Utility Function
-void sendMessageClient(int client_fd, char **message, long message_len);
-
 #endif

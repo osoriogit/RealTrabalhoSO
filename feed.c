@@ -98,7 +98,13 @@ int main(int argc, char *argv[]) {
     }
     fprintf(stderr, "[DEBUG] verificar a disponibilidade\n");
     // Validar a disponibilidade de conexão/username
-    if (strcmp(r.motivo, "USER_LIMIT") == 0) {
+    if (strcmp(r.motivo, "USER_ALR_EXISTS") == 0) {
+        printf("[ERRO] Username inválido!\n");
+        close(fd);
+        close(fd_cli_temp);
+        unlink(username_pid);
+        exit(7);
+    } else if (strcmp(r.motivo, "USER_LIMIT") == 0) {
         printf("[ERRO] Nº de utilizadores excedido, tente mais tarde!\n");
         close(fd);
         close(fd_cli_temp);

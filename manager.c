@@ -6,15 +6,25 @@
 
 Topics topics[MAX_TOPICS];
 Users users[MAX_USERS];
+//TOPICOS
 int num_topics = 0;
-int num_clients = 0;
+int num_clients = 0;//clientes topicos
 // Variáveis globais
 char client_pipe_name[20];
 int clientes_conectados = 0;
 int running = 1; // Controla a execução
+//STOP WAIT UNTIL OTHER
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
-
+//
+int testeIgualFunc(const char *str, int tamanho_array) {
+    for (int i = 0; i < tamanho_array; i++) {
+        if (strncmp(str, users[i].username,5) == 0) {
+            return 1;
+        }
+    }
+    return 0;
+}
 // Função para criar a variável de ambiente MSG_FICH
 int createMsgFich(char *msg_fich) {
     if (setenv("MSG_FICH", "mensagem.txt", 1) == -1) {
@@ -114,13 +124,13 @@ int blockTopic(const char *topic_name, int block) {
     pthread_mutex_unlock(&mutex);
     return -1; // Tópico não encontrado
 }
+
 void broadcastMessage(const char *topic_name, Resposta message) {
     fprintf(stderr, "[DEBUG] BROADCAST_ENTER");
     pthread_mutex_lock(&mutex);
     for (int i = 0; i < num_clients; i++) {
         for (int j = 0; j < users[i].nSubs; j++) {
             if (strcmp(users[i].subs[j], topic_name) == 0){
-                //snprintf(client_pipe_name, sizeof(client_pipe_name), CLIENT_FIFO_TEMPLATE, atoi(users[i].username));
                 strcpy(client_pipe_name, users[i].username);
                 int client_fd = open(client_pipe_name, O_WRONLY);
                 if (client_fd != -1) {
@@ -134,32 +144,51 @@ void broadcastMessage(const char *topic_name, Resposta message) {
 
     pthread_mutex_unlock(&mutex);
 }
-// Função para lidar com clientes
-void *handleClients(void *arg) {
-    int server_fd = *((int *)arg);
-    Pedido pedido;
-    Resposta message;
-
-    while (running) {
-        read(server_fd, &pedido, sizeof(pedido));
-            //fprintf(stderr, "[DEBUG] %s, %s, %d, %s\n",
-                   // pedido.acao, pedido.topico, pedido.duracao, pedido.mensagem);
-            
-            if (strcmp(pedido.acao, "validar") == 0) {
-                clientes_conectados++;
-                printf("USERNAME INTRUDUZIDO %s\n",pedido.mensagem);
-                
-                strcpy(message.mensagem,"USER VALIDO");
-                strcpy(message.motivo,"USER VALIDO");
-                if(clientes_conectados>10){strcpy(message.motivo,"USER_LIMIT");};
-                int client_fd = open(pedido.mensagem, O_WRONLY);
+void broadcastALL(Resposta message) {
+    fprintf(stderr, "[DEBUG] BROADCAST_ENTER");
+    pthread_mutex_lock(&mutex);
+    for (int i = 0; i < clientes_conectados; i++) {
+        for (int j = 0; j < clientes_conectados; j++) {
+                strcpy(client_pipe_name, users[i].username);
+                int client_fd = open(client_pipe_name, O_WRONLY);
                 if (client_fd != -1) {
                     write(client_fd, &message, sizeof(message));
                     close(client_fd);
                 }
-                if(clientes_conectados<10){strcpy(users[clientes_conectados].username,pedido.mensagem);};
-                strcpy(pedido.acao, ""); 
+        }
+    }
+    fprintf(stderr, "[DEBUG] BC_CLOSE");
+
+    pthread_mutex_unlock(&mutex);
+}
+// Função para lidar com clientes
+void *handleClients(void *arg) {
+    int server_fd = *((int *)arg);
+    Resposta message;
+    Pedido pedido;
+    while (running) {
+        read(server_fd, &pedido, sizeof(pedido));
+            //VALIDAR
+            if (strcmp(pedido.acao, "validar") == 0) {
+                    printf("USERNAME INTRUDUZIDO %s\n",pedido.mensagem);
+                    strcpy(message.mensagem,"USER VALIDO");
+                    strcpy(message.motivo,"USER VALIDO");
+
+                    if(clientes_conectados>10){strcpy(message.motivo,"USER_LIMIT");};
+
+                    int testeIgual=testeIgualFunc(pedido.mensagem,clientes_conectados);
+
+                    if(testeIgual==1){strcpy(message.motivo,"USER_ALR_EXISTS");};
+                    int client_fd = open(pedido.mensagem, O_WRONLY);
+                    if (client_fd != -1) {
+                        clientes_conectados++;
+                        write(client_fd, &message, sizeof(message));
+                        close(client_fd);
+                    }
+                    if(clientes_conectados<10){strcpy(users[clientes_conectados].username,pedido.mensagem);};
+                    strcpy(pedido.acao, ""); 
             }
+            //SUBSCRIBE
             if (strcmp(pedido.acao, "subscribe") == 0) {
                 int result = subscribeClient(pedido.username, pedido.topico);
                 if (result == -2) {
@@ -170,22 +199,41 @@ void *handleClients(void *arg) {
                      
                     sprintf(message.mensagem, "SUBSCREVEU AO TOPICO %s", pedido.topico);
                     pthread_mutex_lock(&mutex);
-                        setRespostaMotivo(&message, "Sucesso subscrito");
-                        write(v, &message, sizeof(message));
-                        close(v); 
+                    strcpy(message.motivo,"Sucesso subscrito");
+                    write(v, &message, sizeof(message));
+                    close(v); 
                     pthread_mutex_unlock(&mutex);
+                }
+                strcpy(pedido.acao, ""); 
+
+            }else if (strcmp(pedido.acao, "topics") == 0) {
+                for(int contador=0;contador<num_topics;contador++){
+                        strcpy(message.mensagem,"topico");
+                        strcpy(message.motivo,"topico");
+                    broadcastALL(message);
                 }
                 strcpy(pedido.acao, ""); 
 
             } else if (strcmp(pedido.acao, "msg") == 0) {
                 printf("[INFO] Mensagem recebida no tópico %s: %s\n",
                        pedido.topico, pedido.mensagem);
-                
-                setRespostaMensagem(&message, pedido.mensagem);
-                setRespostaMotivo(&message, "Broadcast");
+
+                strcpy(message.mensagem,pedido.mensagem);
+                strcpy(message.motivo,"Broadcast");
                 broadcastMessage(pedido.topico, message);
                 strcpy(pedido.acao, ""); 
 
+            }else if (strcmp(pedido.acao, "exit") == 0) {
+                clientes_conectados--;
+                printf(" %s Vai Sair\n",pedido.username);
+                strcpy(message.mensagem,"xau vais sair");
+                strcpy(message.motivo,"USER_LEAVE");
+                int client_fd = open(pedido.username, O_WRONLY);
+                if (client_fd != -1) {
+                    write(client_fd, &message, sizeof(message));
+                    close(client_fd);
+                    strcpy(pedido.acao, "");
+                }
             }
     }
 
@@ -196,7 +244,7 @@ void *handleClients(void *arg) {
 // Função para lidar com comandos do administrador
 void *handleAdmin(void *arg) {
     char buffer[256];
-
+    Resposta message;
     while (running) {
         printf("Comando: ");
         fgets(buffer, sizeof(buffer), stdin);
@@ -232,6 +280,9 @@ void *handleAdmin(void *arg) {
             }
         } else if (strcmp(buffer, "close\n") == 0) {
             printf("[INFO] Encerrando o servidor...\n");
+            strcpy(message.mensagem,"END_SERVER");
+            strcpy(message.motivo,"END_SERVER");
+            broadcastALL(message);
             pthread_mutex_lock(&mutex);
             running = 0; // Sinaliza para encerrar
             pthread_mutex_unlock(&mutex);
