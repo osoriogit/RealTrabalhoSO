@@ -54,7 +54,7 @@ int findOrCreateTopic(const char *topic_name) {
 
 // Função para subscrever um cliente a um tópico
 int subscribeClient(const char *username, const char *topic_name) {
-    fprintf(stderr, "[DEBUG] %s, %s, %d, %s\n", username,topic_name);
+    fprintf(stderr, "[DEBUG] %s, %s\n", username,topic_name);
     pthread_mutex_lock(&mutex);
 
     int topic_idx = findOrCreateTopic(topic_name);
