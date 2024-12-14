@@ -1,10 +1,10 @@
 all: manager feed
 
 manager: manager.c
-	gcc -o manager manager.c util.c
+	gcc -o manager manager.c
 
 feed: feed.c
-	gcc -o feed feed.c util.c
+	gcc -o feed feed.c
 
 clean:
 	rm -f manager feed

@@ -147,15 +147,13 @@ void broadcastMessage(const char *topic_name, Resposta message) {
 void broadcastALL(Resposta message) {
     fprintf(stderr, "[DEBUG] BROADCAST_ENTER");
     pthread_mutex_lock(&mutex);
-    for (int i = 0; i < clientes_conectados; i++) {
-        for (int j = 0; j < clientes_conectados; j++) {
-                strcpy(client_pipe_name, users[i].username);
-                int client_fd = open(client_pipe_name, O_WRONLY);
-                if (client_fd != -1) {
-                    write(client_fd, &message, sizeof(message));
-                    close(client_fd);
-                }
-        }
+    for (int i = 0; i < clientes_conectados+1; i++) {
+            strcpy(client_pipe_name, users[i].username);
+            int client_fd = open(client_pipe_name, O_WRONLY);
+            if (client_fd != -1) {
+                write(client_fd, &message, sizeof(message));
+                close(client_fd);
+            }
     }
     fprintf(stderr, "[DEBUG] BC_CLOSE");
 
@@ -181,11 +179,10 @@ void *handleClients(void *arg) {
                     if(testeIgual==1){strcpy(message.motivo,"USER_ALR_EXISTS");};
                     int client_fd = open(pedido.mensagem, O_WRONLY);
                     if (client_fd != -1) {
-                        clientes_conectados++;
                         write(client_fd, &message, sizeof(message));
                         close(client_fd);
                     }
-                    if(clientes_conectados<10){strcpy(users[clientes_conectados].username,pedido.mensagem);};
+                    if(clientes_conectados<10){strcpy(users[clientes_conectados].username,pedido.mensagem);clientes_conectados++;};
                     strcpy(pedido.acao, ""); 
             }
             //SUBSCRIBE
@@ -204,9 +201,23 @@ void *handleClients(void *arg) {
                     close(v); 
                     pthread_mutex_unlock(&mutex);
                 }
-                strcpy(pedido.acao, ""); 
-
-            }else if (strcmp(pedido.acao, "topics") == 0) {
+                strcpy(pedido.acao, "");
+            }else if (strcmp(pedido.acao, "unsubscribe") == 0) {
+                int result = subscribeClient(pedido.username,"");
+                if (result == -2) {
+                    printf("[INFO] Falha: Tópico %s está bloqueado.\n", pedido.topico);
+                } else if (result > 0) {
+                    printf("[INFO] %s dessubscreveu ao tópico %s\n", pedido.username, pedido.topico);
+                    int v = open(pedido.username, O_WRONLY);
+                     
+                    sprintf(message.mensagem, "DESUBSCREVEU AO TOPICO %s", pedido.topico);
+                    pthread_mutex_lock(&mutex);
+                    strcpy(message.motivo,"Sucesso dessubscrito");
+                    write(v, &message, sizeof(message));
+                    close(v); 
+                    pthread_mutex_unlock(&mutex);
+                }
+                strcpy(pedido.acao, ""); else if (strcmp(pedido.acao, "topics") == 0) {
                 for(int contador=0;contador<num_topics;contador++){
                         strcpy(message.mensagem,"topico");
                         strcpy(message.motivo,"topico");

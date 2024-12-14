@@ -66,7 +66,7 @@ int main(int argc, char *argv[]) {
     char username_pid[256];
     snprintf(username_pid, sizeof(username_pid), "%s_%d", username, getpid());
 
-    // Criar FIFO temporário para validação
+    // Criar FIFO para e receçao de dados validação
     if (mkfifo(username_pid, 0666) == -1) {
         printf("[ERRO] Falha ao criar o FIFO temporário\n");
         close(fd);
