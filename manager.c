@@ -216,8 +216,8 @@ void *handleClients(void *arg) {
                     write(v, &message, sizeof(message));
                     close(v); 
                     pthread_mutex_unlock(&mutex);
-                    strcpy(pedido.acao, "");
-                } else if (strcmp(pedido.acao, "topics") == 0) {
+                    
+                }strcpy(pedido.acao, "");} else if (strcmp(pedido.acao, "topics") == 0) {
                 for(int contador=0;contador<num_topics;contador++){
                         strcpy(message.mensagem,"topico");
                         strcpy(message.motivo,"topico");
