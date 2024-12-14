@@ -6,7 +6,7 @@
 
 // Função para enviar mensagem ao servidor
 void sendMessage(int fd, Pedido *p, const char *cmd) {
-    fprintf(stderr, "[DEBUG] %s, %s, %d, %s\n", p->acao, p->topico, p->duracao, p->mensagem,p->username);
+    fprintf(stderr, "[DEBUG] %s, %s, %d, %s, %s\n", p->acao, p->topico, p->duracao, p->mensagem,p->username);
 
     if (write(fd, p, sizeof(Pedido)) == -1) {
         fprintf(stderr, "[ERRO] Falha ao enviar mensagem para o servidor: %s\n", cmd);
