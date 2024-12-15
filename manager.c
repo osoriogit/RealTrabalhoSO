@@ -146,7 +146,6 @@ void broadcastMessage(const char *topic_name, Resposta message) {
 }
 void broadcastALL(Resposta message) {
     fprintf(stderr, "[DEBUG] BROADCAST_ENTER");
-    pthread_mutex_lock(&mutex);
     for (int i = 0; i < clientes_conectados+1; i++) {
             strcpy(client_pipe_name, users[i].username);
             int client_fd = open(client_pipe_name, O_WRONLY);
@@ -156,8 +155,6 @@ void broadcastALL(Resposta message) {
             }
     }
     fprintf(stderr, "[DEBUG] BC_CLOSE");
-
-    pthread_mutex_unlock(&mutex);
 }
 // Função para lidar com clientes
 void *handleClients(void *arg) {
@@ -287,8 +284,18 @@ void *handleAdmin(void *arg) {
                     printf("[INFO] %s subscrito ao tópico %s pelo admin\n", username, topic_name);
                 }
             }
-        } else if (strncmp(buffer, "block", 5) == 0) {
-            char *topic_name = strtok(buffer + 6, "\n");
+        }else if (strncmp(buffer, "remove", 6) == 0) {
+            char *usernamekick = strtok(buffer + 7, "\n");
+            strcpy(message.mensagem,"USER_REMOVED");
+            strcpy(message.motivo,"USER_REMOVED");
+            pthread_mutex_lock(&mutex);
+            fprintf(stderr, "[DEBUG] username=%s vai kick motivo = %s\n",usernamekick,message.motivo);
+            int fff= open(usernamekick, O_WRONLY);
+            write(fff, &message, sizeof(message));
+            close(fff);
+            pthread_mutex_unlock(&mutex);
+        } else if (strncmp(buffer, "lock", 4) == 0) {
+            char *topic_name = strtok(buffer + 5, "\n");
             if (topic_name) {
                 if (blockTopic(topic_name, 1) > 0) {
                     printf("[INFO] Tópico %s bloqueado.\n", topic_name);
@@ -296,8 +303,8 @@ void *handleAdmin(void *arg) {
                     printf("[INFO] Falha ao bloquear o tópico %s.\n", topic_name);
                 }
             }
-        } else if (strncmp(buffer, "unblock", 7) == 0) {
-            char *topic_name = strtok(buffer + 8, "\n");
+        } else if (strncmp(buffer, "unlock", 6) == 0) {
+            char *topic_name = strtok(buffer + 7, "\n");
             if (topic_name) {
                 if (blockTopic(topic_name, 0) > 0) {
                     printf("[INFO] Tópico %s desbloqueado.\n", topic_name);
@@ -309,7 +316,10 @@ void *handleAdmin(void *arg) {
             printf("[INFO] Encerrando o servidor...\n");
             strcpy(message.mensagem,"END_SERVER");
             strcpy(message.motivo,"END_SERVER");
+            pthread_mutex_lock(&mutex);
+            fprintf(stderr, "[DEBUG] motivo do serividor fechar = %s\n", message.motivo);
             broadcastALL(message);
+            pthread_mutex_unlock(&mutex);
             pthread_mutex_lock(&mutex);
             running = 0; // Sinaliza para encerrar
             pthread_mutex_unlock(&mutex);
