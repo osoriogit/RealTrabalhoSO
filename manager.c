@@ -146,7 +146,7 @@ void broadcastMessage(const char *topic_name, Resposta message) {
 }
 void broadcastALL(Resposta message) {
     fprintf(stderr, "[DEBUG] BROADCAST_ENTER");
-    for (int i = 0; i < clientes_conectados+1; i++) {
+    for (int i = 0; i < 10; i++) {
             strcpy(client_pipe_name, users[i].username);
             int client_fd = open(client_pipe_name, O_WRONLY);
             if (client_fd != -1) {
@@ -294,6 +294,13 @@ void *handleAdmin(void *arg) {
             write(fff, &message, sizeof(message));
             close(fff);
             pthread_mutex_unlock(&mutex);
+        }else if (strncmp(buffer, "topics", 6) == 0) {
+            printf("\nTopicos:\n");
+                pthread_mutex_lock(&mutex);
+                for (int i = 0; i < num_topics; i++) {
+                    printf(" Nome: %s\n", topics[i].nome);
+                }
+            pthread_mutex_unlock(&mutex);
         } else if (strncmp(buffer, "lock", 4) == 0) {
             char *topic_name = strtok(buffer + 5, "\n");
             if (topic_name) {
@@ -302,6 +309,12 @@ void *handleAdmin(void *arg) {
                 } else {
                     printf("[INFO] Falha ao bloquear o tópico %s.\n", topic_name);
                 }
+            }
+        }else if (strncmp(buffer, "users", 4) == 0) {
+            printf("\nusers connected:\n");
+            for(int conter;conter<10;conter++)
+            {
+                printf("\n%s",users[conter].username);
             }
         } else if (strncmp(buffer, "unlock", 6) == 0) {
             char *topic_name = strtok(buffer + 7, "\n");
