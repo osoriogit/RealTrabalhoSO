@@ -18,7 +18,6 @@
 #define MAX_PERSISTENT_MESSAGES 5
 #define MAX_TOPIC_NAME 20
 #define MAX_MESSAGE_BODY 300
-#define FIFO_SRV "fifo_srv"
 
 typedef struct {
     char username[30];

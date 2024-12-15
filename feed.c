@@ -31,7 +31,7 @@ int main(int argc, char *argv[]) {
     Pedido p;
     Resposta r;
 
-    fprintf(stderr, "[DEBUG]\n");
+    //fprintf(stderr, "[DEBUG]\n");
 
     if (argc != 2) {
         printf("[ERRO] Sintaxe incorreta. Uso: <programa> <username>\n");
@@ -41,7 +41,7 @@ int main(int argc, char *argv[]) {
     strncpy(username, argv[1], sizeof(username) - 1);
     username[strlen(username)] = '\0'; // Garantir terminação segura
 
-    fprintf(stderr, "[DEBUG] username = %s\n", username);
+    //fprintf(stderr, "[DEBUG] username = %s\n", username);
 
     // Verifica se o pipe do servidor existe.
     if (access(FIFO_MAN, F_OK) != 0) {
@@ -49,7 +49,7 @@ int main(int argc, char *argv[]) {
         exit(2);
     }
 
-    fprintf(stderr, "[DEBUG] Servidor ligado\n");
+    //fprintf(stderr, "[DEBUG] Servidor ligado\n");
 
     // Abertura do FIFO do servidor
     fd = open(FIFO_MAN, O_WRONLY);
@@ -58,7 +58,7 @@ int main(int argc, char *argv[]) {
         exit(3);
     }
 
-    fprintf(stderr, "[DEBUG] Acedeu ao FIFO do servidor\n");
+    //fprintf(stderr, "[DEBUG] Acedeu ao FIFO do servidor\n");
 
 //login bellow
 
@@ -87,7 +87,7 @@ int main(int argc, char *argv[]) {
     configMessage(&p, "validar","",1,username_pid,username_pid);
     sendMessage(fd, &p, username_pid);
 
-    fprintf(stderr,"Receber resposta do servidor\n");
+    //fprintf(stderr,"Receber resposta do servidor\n");
     // Receber resposta do servidor
     if (read(fd_cli_temp, &r, sizeof(Resposta)) != sizeof(Resposta)) {
         printf("[ERRO] Falha ao receber resposta do servidor\n");
@@ -96,7 +96,7 @@ int main(int argc, char *argv[]) {
         unlink(username_pid);
         exit(6);
     }
-    fprintf(stderr, "[DEBUG] verificar a disponibilidade\n");
+    printf("verificar a disponibilidade\n");
     // Validar a disponibilidade de conexão/username
     if (strcmp(r.motivo, "USER_ALR_EXISTS") == 0) {
         printf("[ERRO] Username inválido!\n");
@@ -116,10 +116,8 @@ int main(int argc, char *argv[]) {
 
     
 //login above
-    // Exibir menu
-    //menuTable();
     fd_set read_fds;
-    int max_fd = (fd_cli_temp > STDIN_FILENO ? fd_cli_temp : STDIN_FILENO) + 1; // Determinar maior descritor
+    int max_fd = (fd_cli_temp > STDIN_FILENO ? fd_cli_temp : STDIN_FILENO) + 1;
 
     while (1) {
         FD_ZERO(&read_fds);          // Limpar conjunto de descritores
@@ -134,7 +132,7 @@ int main(int argc, char *argv[]) {
             break;
         }
 
-        // Verificar se há entrada no teclado
+        //se há entrada no teclado
         if (FD_ISSET(STDIN_FILENO, &read_fds)) {
             if (!fgets(cmd, sizeof(cmd), stdin)) {
                 printf("[ERRO] Erro ao ler o comando. Tente novamente!\n");
